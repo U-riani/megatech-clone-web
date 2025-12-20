@@ -5,68 +5,180 @@ import {
   getProductsByCategory,
   searchProducts,
 } from "../api/products";
+import Filters from "../components/Filters";
+import SortBar from "../components/SortBar";
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
+  const [filtered, setFiltered] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minRating, setMinRating] = useState("");
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [brands, setBrands] = useState([]);
+
+  const [showFilters, setShowFilters] = useState(false);
+
+  const [sort, setSort] = useState("");
 
   const [searchParams] = useSearchParams();
   const category = searchParams.get("category");
   const q = searchParams.get("q");
 
+  const handleFilterChange = (key, value) => {
+    if (key === "minPrice") setMinPrice(value);
+    if (key === "maxPrice") setMaxPrice(value);
+    if (key === "minRating") setMinRating(value);
+
+    if (key === "brand") {
+      setSelectedBrands((prev) =>
+        prev.includes(value)
+          ? prev.filter((b) => b !== value)
+          : [...prev, value]
+      );
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
 
     let request;
-
-    if (q) {
-      request = searchProducts(q);
-    } else if (category) {
-      request = getProductsByCategory(category);
-    } else {
-      request = getProducts({ limit: 24 });
-    }
+    if (q) request = searchProducts(q);
+    else if (category) request = getProductsByCategory(category);
+    else request = getProducts({ limit: 100 });
 
     request
       .then((data) => {
         setProducts(data.products || []);
       })
-      .catch(console.error)
       .finally(() => setLoading(false));
   }, [category, q]);
 
-  if (loading) {
-    return <div className="text-gray-500">Loading products…</div>;
-  }
+  useEffect(() => {
+    let result = [...products];
+
+    if (minPrice) {
+      result = result.filter((p) => p.price >= Number(minPrice));
+    }
+
+    if (maxPrice) {
+      result = result.filter((p) => p.price <= Number(maxPrice));
+    }
+
+    if (minRating) {
+      result = result.filter((p) => p.rating >= Number(minRating));
+    }
+
+    if (selectedBrands.length) {
+      result = result.filter((p) => selectedBrands.includes(p.brand));
+    }
+
+    if (sort === "price_asc") {
+      result.sort((a, b) => a.price - b.price);
+    }
+
+    if (sort === "price_desc") {
+      result.sort((a, b) => b.price - a.price);
+    }
+
+    if (sort === "name_asc") {
+      result.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    if (sort === "name_desc") {
+      result.sort((a, b) => b.title.localeCompare(a.title));
+    }
+
+    setFiltered(result);
+  }, [products, minPrice, maxPrice, minRating, selectedBrands, sort]);
+
+  useEffect(() => {
+    const uniqueBrands = [
+      ...new Set(products.map((p) => p.brand).filter(Boolean)),
+    ].sort();
+
+    setBrands(uniqueBrands);
+  }, [products]);
+
+  if (loading) return <div>Loading products…</div>;
 
   return (
-    <div>
-      <h1 className="mb-4 text-xl font-bold">
-        {category
-          ? `Category: ${category}`
-          : q
-          ? `Search: "${q}"`
-          : "All Products"}
-      </h1>
+    <div className="flex gap-6">
+      {/* Desktop sidebar */}
+      <aside className="hidden w-64 shrink-0 lg:block">
+        <Filters
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          minRating={minRating}
+          brands={brands}
+          selectedBrands={selectedBrands}
+          onChange={handleFilterChange}
+        />
+      </aside>
+      {/* Mobile filter button + overlay */}
+      {showFilters && (
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setShowFilters(false)}
+          />
+          <div className="absolute left-0 top-0 h-full w-80 bg-white p-4 shadow-xl">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="font-semibold">Filters</div>
+              <button onClick={() => setShowFilters(false)} className="text-sm">
+                Close
+              </button>
+            </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        {products.map((p) => (
-          <Link
-            key={p.id}
-            to={`/products/${p.id}`}
-            className="rounded-lg border bg-white p-3 transition hover:shadow"
-          >
-            <img
-              src={p.thumbnail}
-              alt={p.title}
-              className="mb-2 h-40 w-full object-contain"
+            <Filters
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              minRating={minRating}
+              brands={brands}
+              selectedBrands={selectedBrands}
+              onChange={handleFilterChange}
             />
+          </div>
+        </div>
+      )}
+      {/* Products */}
+      <div className="flex-1">
+        <div className="mb-2 flex items-center justify-between lg:hidden">
+          <button
+            onClick={() => setShowFilters(true)}
+            className="rounded-md border px-3 py-2 text-sm"
+          >
+            Filters
+          </button>
+        </div>
 
-            <div className="text-sm font-medium line-clamp-2">{p.title}</div>
+        {/* Sort bar */}
+        <SortBar
+          sort={sort}
+          total={filtered.length}
+          onChange={(value) => setSort(value)}
+        />
 
-            <div className="mt-1 font-bold">${p.price}</div>
-          </Link>
-        ))}
+        {/* Products grid */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {filtered.map((p) => (
+            <Link
+              key={p.id}
+              to={`/products/${p.id}`}
+              className="rounded-lg border bg-white p-3 transition hover:shadow"
+            >
+              <img
+                src={p.thumbnail}
+                alt={p.title}
+                className="mb-2 h-40 w-full object-contain"
+              />
+              <div className="text-sm font-medium line-clamp-2">{p.title}</div>
+              <div className="mt-1 font-bold">${p.price}</div>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

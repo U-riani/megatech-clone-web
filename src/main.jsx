@@ -5,10 +5,13 @@ import { BrowserRouter } from "react-router-dom";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 import { config } from "@fortawesome/fontawesome-svg-core";
 import "./i18n";
+import { CartProvider } from "./context/CartContext.jsx";
 config.autoAddCss = false;
 
 createRoot(document.getElementById("root")).render(
   <BrowserRouter>
-    <App />
+    <CartProvider>
+      <App />
+    </CartProvider>
   </BrowserRouter>
 );

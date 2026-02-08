@@ -7,6 +7,7 @@ import {
 } from "../api/products";
 import Filters from "../components/Filters";
 import SortBar from "../components/SortBar";
+import ActiveFilters from "../components/ActiveFilters";
 
 export default function ProductList() {
   const [products, setProducts] = useState([]);
@@ -20,10 +21,9 @@ export default function ProductList() {
   const [brands, setBrands] = useState([]);
 
   const [showFilters, setShowFilters] = useState(false);
-
   const [sort, setSort] = useState("");
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const category = searchParams.get("category");
   const q = searchParams.get("q");
 
@@ -41,6 +41,7 @@ export default function ProductList() {
     }
   };
 
+  // Fetch products
   useEffect(() => {
     setLoading(true);
 
@@ -50,63 +51,53 @@ export default function ProductList() {
     else request = getProducts({ limit: 100 });
 
     request
-      .then((data) => {
-        setProducts(data.products || []);
-      })
+      .then((data) => setProducts(data.products || []))
       .finally(() => setLoading(false));
   }, [category, q]);
 
+  // Apply filters + sorting
   useEffect(() => {
     let result = [...products];
 
-    if (minPrice) {
-      result = result.filter((p) => p.price >= Number(minPrice));
-    }
-
-    if (maxPrice) {
-      result = result.filter((p) => p.price <= Number(maxPrice));
-    }
-
-    if (minRating) {
-      result = result.filter((p) => p.rating >= Number(minRating));
-    }
+    if (minPrice) result = result.filter((p) => p.price >= Number(minPrice));
+    if (maxPrice) result = result.filter((p) => p.price <= Number(maxPrice));
+    if (minRating) result = result.filter((p) => p.rating >= Number(minRating));
 
     if (selectedBrands.length) {
       result = result.filter((p) => selectedBrands.includes(p.brand));
     }
 
-    if (sort === "price_asc") {
-      result.sort((a, b) => a.price - b.price);
-    }
-
-    if (sort === "price_desc") {
-      result.sort((a, b) => b.price - a.price);
-    }
-
-    if (sort === "name_asc") {
+    if (sort === "price_asc") result.sort((a, b) => a.price - b.price);
+    if (sort === "price_desc") result.sort((a, b) => b.price - a.price);
+    if (sort === "name_asc")
       result.sort((a, b) => a.title.localeCompare(b.title));
-    }
-
-    if (sort === "name_desc") {
+    if (sort === "name_desc")
       result.sort((a, b) => b.title.localeCompare(a.title));
-    }
 
     setFiltered(result);
   }, [products, minPrice, maxPrice, minRating, selectedBrands, sort]);
 
+  // Extract brands
   useEffect(() => {
     const uniqueBrands = [
       ...new Set(products.map((p) => p.brand).filter(Boolean)),
     ].sort();
-
     setBrands(uniqueBrands);
   }, [products]);
+
+  // Clear filters when search query changes
+  useEffect(() => {
+    setMinPrice("");
+    setMaxPrice("");
+    setMinRating("");
+    setSelectedBrands([]);
+  }, [q, category]);
 
   if (loading) return <div>Loading products…</div>;
 
   return (
     <div className="flex gap-6">
-      {/* Desktop sidebar */}
+      {/* Desktop filters */}
       <aside className="hidden w-64 shrink-0 lg:block">
         <Filters
           minPrice={minPrice}
@@ -117,7 +108,8 @@ export default function ProductList() {
           onChange={handleFilterChange}
         />
       </aside>
-      {/* Mobile filter button + overlay */}
+
+      {/* Mobile filters */}
       {showFilters && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div
@@ -143,6 +135,7 @@ export default function ProductList() {
           </div>
         </div>
       )}
+
       {/* Products */}
       <div className="flex-1">
         <div className="mb-2 flex items-center justify-between lg:hidden">
@@ -154,14 +147,40 @@ export default function ProductList() {
           </button>
         </div>
 
-        {/* Sort bar */}
-        <SortBar
-          sort={sort}
-          total={filtered.length}
-          onChange={(value) => setSort(value)}
+        {/* Active filters */}
+        <ActiveFilters
+          search={q}
+          minPrice={minPrice}
+          maxPrice={maxPrice}
+          minRating={minRating}
+          selectedBrands={selectedBrands}
+          onRemove={(key, value) => {
+            if (key === "search") {
+              searchParams.delete("q");
+              setSearchParams(searchParams);
+            }
+            if (key === "minPrice") setMinPrice("");
+            if (key === "maxPrice") setMaxPrice("");
+            if (key === "minRating") setMinRating("");
+            if (key === "brand") {
+              setSelectedBrands((prev) => prev.filter((b) => b !== value));
+            }
+          }}
+          onClearAll={() => {
+            setMinPrice("");
+            setMaxPrice("");
+            setMinRating("");
+            setSelectedBrands([]);
+            searchParams.delete("q");
+            setSearchParams(searchParams);
+            setShowFilters(false);
+          }}
         />
 
-        {/* Products grid */}
+        {/* Sort */}
+        <SortBar sort={sort} total={filtered.length} onChange={setSort} />
+
+        {/* Grid */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {filtered.map((p) => (
             <Link

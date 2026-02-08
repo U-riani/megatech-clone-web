@@ -24,18 +24,20 @@ export default function ShopLayout({ children }) {
                 className="absolute inset-0 bg-black/40"
                 onClick={() => setSidebarOpen(false)}
               />
-              <div className="absolute left-0 top-0 h-full w-80 max-w-[85%] bg-white shadow-xl">
-                <div className="flex items-center justify-between border-b px-4 py-3">
-                  <div className="font-semibold">Categories</div>
-                  <button
-                    className="rounded-md px-3 py-1 text-sm hover:bg-gray-100"
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    Close
-                  </button>
-                </div>
-                <div className="p-4">
-                  <Sidebar />
+              <div className="absolute left-0 top-0 h-full w-80 max-w-[85%] bg-white shadow-xl overflow-y-auto">
+                <div className="relative">
+                  <div className="flex items-center justify-between border-b px-4 py-3 bg-white sticky top-0">
+                    <div className="font-semibold">Categories</div>
+                    <button
+                      className="rounded-md px-3 py-1 text-sm hover:bg-gray-100"
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                  <div className="p-2">
+                    <Sidebar />
+                  </div>
                 </div>
               </div>
             </div>

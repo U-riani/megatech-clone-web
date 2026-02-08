@@ -14,21 +14,24 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-semibold text-gray-600">Categories</div>
+    <div className="">
+      {/* <div className="text-sm font-semibold text-gray-600">Categories</div> */}
 
       {loading && <div className="text-sm text-gray-400">Loading…</div>}
 
-      {!loading &&
-        categories.map((cat) => (
-          <Link
-            key={cat}
-            to={`/products?category=${cat}`}
-            className="block rounded-md px-3 py-2 capitalize hover:bg-gray-100"
-          >
-            {cat.replace("-", " ")}
-          </Link>
-        ))}
+      {!loading && (
+        <div className="">
+          {categories.map((cat) => (
+            <Link
+              key={cat}
+              to={`/products?category=${cat}`}
+              className="block rounded-md px-3 py-2 capitalize hover:bg-gray-100"
+            >
+              {cat.replace("-", " ")}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
